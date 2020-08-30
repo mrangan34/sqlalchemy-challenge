@@ -4,7 +4,7 @@ import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
-
+import datetime as dt
 from flask import Flask, jsonify
 
 
@@ -36,6 +36,9 @@ app = Flask(__name__)
 # Flask Routes
 #################################################
 
+
+
+
 @app.route("/")
 def welcome():
 #"""List all available api routes."""
@@ -44,8 +47,8 @@ def welcome():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start><br/>"
-        f"/api/v1.0/<start>/<end"
+        f"api/v1.0/start"
+        f"/api/v1.0/startend"
     )
 
 
@@ -66,14 +69,22 @@ def precipitation():
 
     #create dict from the row data and append to a list of all measurement dates
     precipitation_list = []
+    # date_list = []
     for date,prcp in precipitation_results:
         precipitation_dict = {}
         precipitation_dict["date"] = date
         precipitation_dict["prcp"] = prcp
         precipitation_list.append(precipitation_dict)
+        # date_list.append(date)
+  
+    # print("Here is the date list, sorted")
+    # date_list = date_list.sort
+    # print(date_list)
 
     return jsonify(precipitation_list)
 
+
+    # session.query(measurement.date).order_by(measurement.date.desc()).first()
 
 
 
@@ -151,20 +162,64 @@ def tobs():
     return jsonify(temperature_list)
 
 
-# temp = [measurement.station, 
-#     func.min(measurement.tobs),
-#     func.max(measurement.tobs),
-#     func.avg(measurement.tobs)]
+@app.route("/api/v1.0/start")
+def start():
+    
+    session = Session(engine)
 
-# temp_stats =session.query(*temp).group_by(measurement.station).\
-# order_by(func.count(measurement.station).desc()).first()
+  # Return a JSON list of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range.
+    start_date = dt.date(2010,4, 23)
+    end_date = dt.date(2010,5, 1)
+
+    results = session.query(func.min(measurement_table.tobs), func.avg(measurement_table.tobs), func.max(measurement_table.tobs)).\
+        filter(measurement_table.date >= start_date).all()
+
+    session.close()
+
+   
+    start_date_tobs_list = []
+    for min, avg, max in results:
+        start_date_tobs_dict = {}
+        start_date_tobs_dict["min_temp"] = min
+        start_date_tobs_dict["avg_temp"] = avg
+        start_date_tobs_dict["max_temp"] = max
+        start_date_tobs_list.append(start_date_tobs_dict)
+
+    return jsonify(start_date_tobs_list)
 
 
-# temp_stats
 
- # * Query the dates and temperature observations of the most active station for the last year of data.
-  
- # * Return a JSON list of temperature observations (TOBS) for the previous year.
+
+
+
+
+
+@app.route("/api/v1.0/startend")
+def startend():
+    
+    session = Session(engine)
+
+  # Return a JSON list of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range.
+    start_date = dt.date(2010,4, 23)
+    end_date = dt.date(2010,5, 1)
+
+    results = session.query(func.min(measurement_table.tobs), func.avg(measurement_table.tobs), func.max(measurement_table.tobs)).\
+        filter(measurement_table.date >= start_date).filter(measurement_table.date <= end_date).all()
+
+    session.close()
+
+   
+    start_end_date_tobs_list = []
+    for min, avg, max in results:
+        start_end_date_tobs_dict = {}
+        start_end_date_tobs_dict["min_temp"] = min
+        start_end_date_tobs_dict["avg_temp"] = avg
+        start_end_date_tobs_dict["max_temp"] = max
+        start_end_date_tobs_list.append(start_end_date_tobs_dict)
+
+    return jsonify(start_end_date_tobs_list)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
