@@ -1,5 +1,5 @@
+#imports
 import numpy as np
-
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -21,33 +21,29 @@ Base.prepare(engine, reflect=True)
 # Save reference to the table
 measurement_table = Base.classes.measurement
 station_table = Base.classes.station
+
+#verify keys
 print(Base.classes.keys())
 
 
 
-#################################################
 # Flask Setup
-#################################################
 app = Flask(__name__)
 
 
 
-#################################################
 # Flask Routes
-#################################################
 
-
-
-
+#home
 @app.route("/")
 def welcome():
-#"""List all available api routes."""
+#List all available api routes
     return (
         f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"api/v1.0/start"
+        f"/api/v1.0/start<br/>"
         f"/api/v1.0/startend"
     )
 
@@ -55,7 +51,7 @@ def welcome():
 
 
 
-
+#precipitation
 @app.route("/api/v1.0/precipitation")
 def precipitation():
 
@@ -68,29 +64,22 @@ def precipitation():
     session.close()
 
     #create dict from the row data and append to a list of all measurement dates
+
+    #empty list
     precipitation_list = []
-    # date_list = []
+
+    #add to dictionary, then append list
     for date,prcp in precipitation_results:
         precipitation_dict = {}
         precipitation_dict["date"] = date
         precipitation_dict["prcp"] = prcp
         precipitation_list.append(precipitation_dict)
-        # date_list.append(date)
-  
-    # print("Here is the date list, sorted")
-    # date_list = date_list.sort
-    # print(date_list)
 
+    #return results
     return jsonify(precipitation_list)
 
 
-    # session.query(measurement.date).order_by(measurement.date.desc()).first()
-
-
-
-
-
-
+#stations
 @app.route("/api/v1.0/stations")
 def stations():
 
@@ -126,17 +115,27 @@ def tobs():
     # Create our session (link) from Python to the DB
     session = Session(engine)
     
-    # Return a list of all stations and their info
+
     station_activity = session.query(measurement_table.station, func.count(measurement_table.station)).group_by(measurement_table.station).\
     order_by(func.count(measurement_table.station).desc()).all()
     most_active_station = station_activity[0]  
 
-    #return jsonify(most_active_station)
+    station_activity = session.query(measurement_table.station, func.count(measurement_table.station)).group_by(measurement_table.station).\
+    order_by(func.count(measurement_table.station).desc()).all()
+    most_active_station = station_activity[0]  
 
-
-    # Return a list of all measurement dates and prcp values
-    temperature_results = session.query(measurement_table.station,measurement_table.date, measurement_table.tobs).all()
+    
     session.close()
+
+
+    # Return a list of measurement dates and tobs values
+    most_recent_date = dt.date(2017,8,18)
+    one_year_ago = dt.date(2016,8,18)
+    temperature_results = session.query(measurement_table.station,measurement_table.date, measurement_table.tobs).\
+        filter(measurement_table.date >= one_year_ago).all()
+
+    session.close()
+
 
     #create dict from the row data and append to a list of all measurement dates
     temperature_list = []
@@ -162,6 +161,9 @@ def tobs():
     return jsonify(temperature_list)
 
 
+
+
+#start
 @app.route("/api/v1.0/start")
 def start():
     
@@ -192,7 +194,7 @@ def start():
 
 
 
-
+#startend
 
 @app.route("/api/v1.0/startend")
 def startend():
